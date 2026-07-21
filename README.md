@@ -38,7 +38,9 @@ and is left out of backup exports unless you tick a box.
 
 ## Try it
 
-Open the deployed page, or run it yourself:
+**[danielguerrarmz-create.github.io/jobwatch-web](https://danielguerrarmz-create.github.io/jobwatch-web/)**
+
+Or run it yourself:
 
 ```bash
 npm install
