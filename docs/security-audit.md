@@ -4,9 +4,14 @@ Date: 2026-07-21
 Scope: everything under `src/`, plus `index.html`, `vite.config.ts`, `vitest.config.ts`, `package.json`, and the built `dist/`.
 Verdict: **ship**, with the host-level notes in [Residual risk](#residual-risk).
 
-Findings: 0 critical, 0 high, 4 medium, 5 low, 4 informational. All 13 are fixed in code
-except three that are host configuration or inherent to the design, and those are called out
-as residual.
+Findings: 0 critical, 0 high, 5 medium, 8 low, 6 informational, 19 in total. Thirteen are fixed
+in code. Six are in files owned by the concurrent profile and discovery rewrite and are written
+up as concrete fixes to apply (section "Findings in the profile and discovery rewrite"). Three
+are host configuration or inherent to the design and are listed under residual risk.
+
+Two appendices answer the questions asked directly: **Appendix A** is the full risk analysis
+for storing a resume in localStorage, and **Appendix B** is the ReDoS pattern guidance for the
+resume parser.
 
 ---
 
@@ -261,6 +266,124 @@ happy-dom environment options. Iframe page loading is deliberately left enabled:
 only converts the attempt into pages of uncaught-error noise that would bury a real failure,
 and the corpus points iframes at `.test`, a reserved TLD guaranteed never to resolve.
 
+### Findings in the profile and discovery rewrite
+
+These landed after the first pass and are in files owned by the rewrite, so they are written
+as concrete fixes to apply rather than applied directly. None is a vulnerability in the
+exploitable sense; N1 is the one that matters.
+
+#### N1. "Search by name" broadcasts the typed employer to all six ATS vendors (medium, disclosure)
+`src/lib/discover.ts`, `src/components/AddCompany.tsx`
+
+`discoverCompany()` turns a typed name into slug variants and probes every board with them.
+The security properties are fine: every probe goes through `fetchSource()`, so
+`isValidToken()` and the host allowlist both still apply, and the file's claim that it "adds
+no new network surface" is accurate. No new origin is reachable.
+
+What *is* new is what leaves the device. Searching "Mount Sinai" sends
+`GET /v1/boards/mountsinai/jobs` to Greenhouse, `/v0/postings/mountsinai` to Lever, and the
+same guess to Ashby, and to SmartRecruiters, Workable, and Recruitee if the first three miss.
+Five of those six vendors have nothing to do with that employer, and each one learns that some
+IP is interested in it. A normal scan only talks to boards the user has chosen to follow;
+discovery broadcasts an intent signal to everyone.
+
+Low sensitivity in isolation. It matters because it interacts with the privacy claim: the
+onboarding lede now says "the only thing that leaves is the request to each company's own job
+board", and with this feature that is no longer precisely true.
+
+Fix, two parts.
+
+1. In `AddCompany`, the "Search by name" hint gains one sentence:
+   > Searching checks all six job-board systems, so the name you type is sent to each of them
+   > as a lookup. Pasting a link instead only contacts the one board that link points to.
+2. The onboarding lede clause becomes:
+   > The only thing that leaves is the request to the job boards themselves, the same request
+   > your browser would make if you opened those careers pages yourself.
+
+That wording stays true whether the request comes from a scan or from a name search.
+
+#### N2. No ceiling on keyword count (low)
+`src/components/TagEditor.tsx`, `src/lib/scoring.ts`
+
+`TagEditor.add()` splits a paste on commas and caps each item at 120 characters, but never
+caps how many items exist. `compileProfile()` then builds one `RegExp` per keyword and
+`scoreJob()` runs all of them against every posting. `strList()` caps at 400 on *load*, so the
+store self-heals on reload, but the in-memory profile drives the scan for the rest of the
+session.
+
+The realistic trigger is not an attack, it is someone pasting their resume into the skills
+chip box by mistake. That box splits on commas, so a resume becomes hundreds of chips
+immediately.
+
+Fix, at the chokepoint that protects the scan no matter how keywords got there. In
+`scoring.ts`:
+
+```ts
+/** Ceiling on compiled keywords. Matches the cap `strList` applies on load, so an in-memory
+ *  profile cannot outrun what the store would have kept anyway. */
+const MAX_KEYWORDS = 400;
+
+function compile(keywords: string[]): CompiledKeyword[] {
+  // ... unchanged loop ...
+    if (out.length >= MAX_KEYWORDS) break;   // add at the end of the loop body
+```
+
+Worth also capping in `TagEditor.add()` so the UI does not silently accept chips the matcher
+will ignore:
+
+```ts
+if (additions.length) {
+  onChange([...values, ...additions.map((a) => a.slice(0, 120))].slice(0, 400));
+}
+```
+
+#### N3. No ceiling on pasted links (low)
+`src/components/AddCompany.tsx`
+
+`addLinks()` splits on `/[\n,\s]+/` with no cap, so a large paste can create thousands of
+sources. `loadSources()` caps at 1000 on load, so again it self-heals on reload, but until
+then every one of them is a request on the next scan.
+
+Fix: `const lines = links.split(/[\n,\s]+/).map((l) => l.trim()).filter(Boolean).slice(0, 200);`
+and mention the cap in the note if anything was dropped.
+
+#### N4. A discovery probe pages five times to answer a yes/no question (low)
+`src/lib/discover.ts`, `src/lib/ats.ts`
+
+`probe()` calls `fetchSource()`, and the SmartRecruiters adapter loops up to five pages of 100.
+Discovery only needs to know whether the board answers with any roles at all. Worst case a
+single search issues roughly 40 requests rather than the 24 the concurrency comment implies.
+
+Fix: give the adapter a first-page-only mode for probes, either an optional `limitPages`
+argument threaded through `fetchSource`, or have `probe()` stop reading after the first page.
+Politeness, not security, but this feature fires at six third parties on a keypress and the
+cost should be the one the code claims.
+
+#### N5. The resume is described as opt-in storage, and it is not (informational)
+`src/lib/types.ts`
+
+The `resume` field comment says "Storing it is opt-in and clearable on its own." The second
+half is true. The first is not: typing or pasting into the textarea updates profile state,
+and `App.tsx` persists profile to localStorage on every change, so the resume is written the
+moment it is pasted. There is no separate consent step.
+
+This is a comment that will be read as a guarantee by the next person to touch the file.
+Either reword to match behavior:
+
+> Pasting it stores it. It is clearable on its own, and excluded from exports unless the user
+> ticks the box.
+
+or implement the stronger version, which is the better product answer and is described in
+Appendix A: a "use it for this session only" toggle that keeps the resume in React state and
+never calls `saveProfile` with it.
+
+#### N6. The export object URL is revoked before the download is guaranteed to start (informational)
+`src/components/Settings.tsx`
+
+`download()` calls `URL.revokeObjectURL(url)` on the line after `a.click()`. Chrome tolerates
+this for a synchronous click, but it is a known race in other engines and produces a silently
+empty or failed download. Fix: `setTimeout(() => URL.revokeObjectURL(url), 30_000);`
+
 ### Informational
 
 #### I1. Double-encoded markup appears as literal text that reads like a tag
@@ -365,11 +488,183 @@ and the exact values are in `docs/deploy.md`.
 
 ---
 
+## Appendix A: storing a resume, and every risk it creates
+
+The resume is the most sensitive thing this app will ever hold: name, contact details, address
+in many cases, and a full employment history. It is stored in localStorage in plain text. This
+appendix is the complete list of ways that can go wrong, what already handles each one, and
+what I want added.
+
+### A1. It raises the cost of any XSS from annoying to severe
+
+Before the resume, script execution in the page leaked which jobs someone had saved. Now it
+leaks a complete identity document. Nothing about the sanitizer changed, but its *value*
+changed, and that should govern how future edits to it are reviewed. "Let this one tag
+through" is now a decision about PII.
+
+Already handled: the sanitizer was verified against 68 payloads in real Chrome (see above).
+
+Worth stating explicitly because it is unusually strong and easy to erode: **the CSP is the
+second line, and it specifically blocks exfiltration.** Even granting a hypothetical script
+execution, `connect-src` limits `fetch`/`XHR`/`sendBeacon` to the board hosts, `img-src 'self'
+data:` blocks the classic tracking-pixel exfil, `form-action 'none'` blocks form POST, and
+`default-src 'none'` closes the rest. An attacker who won the XSS would still struggle to get
+the resume off the machine. That property is worth more than it looks and it dies the moment
+anyone adds a wildcard to `connect-src` or an analytics script.
+
+**Invariant: never widen `connect-src`, never add `unsafe-inline` to `script-src`, never add
+analytics.**
+
+### A2. Browser extensions can read it, and nothing in the app can stop that
+
+Any extension with host permissions on the origin reads localStorage directly. Grammar and
+writing assistants are the realistic case, because a resume textarea is exactly what they
+attach to. This is unmitigable in application code and therefore has to be disclosed rather
+than fixed.
+
+Current copy says "anyone with access to this browser profile can read it", which is close.
+**Recommend naming extensions**, since that is the likely reader and most people do not think
+of an extension as "access to this browser profile":
+
+> Anyone with access to this browser profile can read it, including browser extensions you
+> have installed.
+
+### A3. Browser spellcheck would have sent it to a remote service, and the code already prevents that
+
+Both resume textareas set `spellCheck={false}`. This is doing real privacy work, not styling:
+Chrome's enhanced spellcheck sends typed text to Google, and several grammar extensions do the
+same. Someone will eventually "fix" this to restore red squiggles.
+
+**Invariant: `spellCheck={false}` stays on the resume textareas.** Added to the invariants list
+in `docs/deploy.md`. Consider `autoComplete="off"` alongside it.
+
+### A4. Shared, borrowed, and public machines
+
+The resume persists indefinitely with no expiry. Someone who tries the app on a library or
+work machine leaves their resume behind unless they know to erase it.
+
+Already handled well: an explicit "Erase resume only" button that keeps the rest of the setup,
+plus honest copy warning about browser-profile access.
+
+**This is the one addition I actually want.** A session-only option:
+
+> [ ] Do not store my resume, use it for this session only
+
+Implemented by keeping the resume in React state and having the persistence effect write
+`{ ...profile, resume: "" }` when the flag is set. It is a small change and it converts "you
+should have known to click Erase" into a decision the user made up front. It also makes the
+`types.ts` comment in N5 true instead of aspirational.
+
+### A5. Export files
+
+Handled correctly, and this is the part I would have expected to be wrong. `exportAll()`
+defaults `includeResume` to false, blanks the field unless the box is ticked, and records
+`resumeIncluded` in the file so the file is self-describing. The reasoning in the code comment
+(a backup gets emailed and synced to cloud drives) is exactly right.
+
+One residual: an export *with* the resume is an unencrypted file in the Downloads folder. The
+checkbox copy already warns. Acceptable.
+
+### A6. Anything reaching the network
+
+Verified none, three ways. There is one `fetch` call site in the codebase, and its URL is built
+from a hardcoded host plus a validated token. There is no `sendBeacon`, `XMLHttpRequest`,
+`WebSocket`, `EventSource`, `new Image`, or dynamic `import()`. There is **no `console.*` call
+anywhere in `src/`**, so the resume is never even written to a log that a screen recording or a
+support request could capture; `extract.ts` states that as a rule and the codebase honors it.
+The regression test `sends nothing about the user beyond which company is being read` pins the
+exact request shape.
+
+This was independently confirmed in a real browser by the team lead: with a resume stored, a
+full scan issued 18 requests, all GET, all to allowed board hosts, no request bodies and no
+user data in any query string, and no telemetry requests of any kind.
+
+**Invariant: `src/lib/storage.ts` gains no network write path, and nothing logs profile
+fields.**
+
+### A7. Two things people will ask that are not risks
+
+Chrome profile sync does not sync localStorage, so the resume does not silently replicate to
+other devices through the browser account. And the resume never reaches the scoring haystack
+or any request; only keywords the user explicitly confirmed from the suggestions do, and those
+are words like "Figma", not resume text.
+
+### A8. New in this rewrite
+
+Opening the app now auto-scans for a returning user, so simply opening the tab contacts every
+followed board without an explicit action. That is correct for a product called "watch" and is
+not a defect, but it belongs in the privacy explanation, because "I only opened it" and "I
+scanned" are the same event now.
+
+---
+
+## Appendix B: ReDoS, and the pattern classes to ban
+
+`extract.ts` is already clean. I reviewed every regex in it and every loop that drives one, and
+found no catastrophic backtracking: all quantifiers are bounded (`{0,29}`, `{1,2}`, `{0,30}`,
+`{1,3}`) or single-character optionals, there is no quantifier nested inside a quantified
+group, alternations are over literals with no repetition wrapped around them, and no pattern is
+ever compiled from resume text. The header comment already commits to these rules. The one real
+bug was the loop guard in N/L4, which was a bound on the wrong quantity rather than a regex
+problem, and it is fixed.
+
+This is guidance for keeping it that way.
+
+### Ban outright
+
+1. **A quantifier inside a quantified group.** `(a+)+`, `(a*)*`, `(\w+\s*)*`, `(\s*\w+)+`.
+   This is the classic, and it is exponential.
+2. **Alternation with overlapping branches under a quantifier.** `(a|ab)+`, `(\d|\d\d)+`. The
+   engine has to try every split of the same text.
+3. **Adjacent unbounded quantifiers over overlapping character classes.** `\s*\s*`, `.*.*`,
+   `\d+\d*`, `[a-z]+[a-z0-9]*`. Ambiguity about which one consumes what is the backtracking.
+4. **Unbounded `.*` or `[\s\S]*` anywhere in a pattern applied to pasted text**, especially
+   between two things that can both match the same characters.
+5. **Any regex built from user data without escaping.** If a pattern must be constructed, it
+   must go through the escape both `scoring.ts` and `extract.ts` already use:
+   `replace(/[.*+?^${}()|[\]\\]/g, "\\$&")`. Compiling raw user text is both ReDoS and a
+   correctness bug.
+6. **Backreferences and variable-length lookbehind over unbounded spans.** They defeat the
+   linear-time optimizations engines apply to simpler patterns.
+
+### Require
+
+1. **Bounded quantifiers.** `{0,40}` rather than `*`, always, on anything scanning pasted text.
+   `[^.\n]{0,40}` is the right shape when a match has to span a few words.
+2. **Cap the input before the regex, not after.** `MAX_INPUT` is applied by `extractFromResume`
+   before anything scans. Keep that ordering; a cap after the scan protects nothing.
+3. **In a `while ((m = re.exec(text)) !== null)` loop, count iterations, not results.** This is
+   exactly what N/L4 got wrong. Any `continue` before the counter increments makes the guard
+   unreachable.
+4. **Never let a `/g` pattern match zero characters.** A zero-width match does not advance
+   `lastIndex`, so the loop spins forever. Every current pattern is safe because each is built
+   around a non-empty literal; a future `\b\w*\b` would hang the tab. If a pattern can match
+   empty, advance `lastIndex` manually.
+5. **Prefer tokenize-once-then-walk-an-array over one large regex.** `extractTitles()` already
+   does this, walking backward through at most two modifier tokens. It is linear, it cannot
+   backtrack, and each rejection rule is a readable line instead of a branch buried in a
+   pattern. This is the pattern to copy for any new extraction.
+
+### Enforce with a test, not a review
+
+Prose rules decay. `src/lib/security.test.ts` now contains ten adversarial 200k-character
+pastes (one long unbroken word, repeated `5+ years` claims, year claims that are all discarded,
+ranges, repeated titles, dense vocabulary hits, whitespace and punctuation, title-gap
+characters, possessive role nouns, and unicode dashes), each asserting `extractFromResume`
+finishes in under two seconds with bounded output. A new pattern from any of the banned classes
+will fail these rather than reaching a user as a frozen tab. Add a case whenever a regex is
+added.
+
+There is also a test asserting evidence snippets stay short and do not carry a phone number
+out of the resume, since suggestions are rendered in the UI and can end up in a screenshot.
+
+---
+
 ## Verification
 
 ```
 npx tsc -b        clean
-npx vitest run    208 passed (5 files), of which 87 are the new security suite
+npx vitest run    220 passed (5 files), of which 101 are the new security suite
 npm run build     succeeds, CSP hash re-verified against dist/index.html
 npm audit         0 vulnerabilities
 gitleaks detect   no leaks

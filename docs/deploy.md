@@ -115,6 +115,15 @@ property rather than a feature. The reasoning behind each is in `docs/security-a
   claim depends on there continuing to be none.
 - **Read paths never throw on malformed stored data.** There is no server-side reset, and the
   in-app Erase button sits behind the same page load that bad data would break.
+- **`spellCheck={false}` stays on the resume textareas.** This is a privacy control, not a
+  style choice: Chrome's enhanced spellcheck sends typed text to a remote service, and a
+  resume box is exactly what writing-assistant extensions attach to. Turning it back on to
+  restore red squiggles would quietly start shipping resumes off the machine.
+- **Nothing logs profile fields.** There is no `console.*` call anywhere in `src/` today, and
+  the resume must never reach a log, an error message, or a thrown value.
+- **Every regex applied to pasted resume text uses bounded quantifiers** and is never compiled
+  from user data. See Appendix B of `docs/security-audit.md` for the banned pattern classes
+  and the adversarial timing tests that enforce them.
 
 ## Updating the company catalog
 

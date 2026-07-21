@@ -137,9 +137,15 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const finishOnboarding = (chosenProfile: Profile, packs: string[]) => {
+  const finishOnboarding = (chosenProfile: Profile, packs: string[], custom: Source[]) => {
     const chosen = new Set(packs);
-    const next = sources.map((s) => ({ ...s, enabled: chosen.has(s.pack) }));
+    const known = new Set(sources.map((s) => s.id));
+    const next = [
+      // Employers the user added by name or link during setup come first, since they are
+      // the ones they explicitly asked for rather than a group they merely ticked.
+      ...custom.filter((c) => !known.has(c.id)),
+      ...sources.map((s) => ({ ...s, enabled: chosen.has(s.pack) })),
+    ];
     setProfile(chosenProfile);
     setSources(next);
     setMeta((m) => ({ ...m, onboarded: true }));

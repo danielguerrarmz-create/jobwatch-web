@@ -60,9 +60,11 @@ Then scan.
 | Workable | Common in Europe and at SMBs |
 | Recruitee | Common in Europe |
 
-116 companies ship in the catalog, every one verified against its live board. Any other
-company can be added by pasting its careers URL, which is the real coverage story: a large
-share of companies run one of these six systems.
+The catalog that ships is a starting point, not the boundary. **Type any employer name and
+Jobwatch goes looking for their job board** across all six systems, then shows you the
+company name and a few real openings so you can confirm it found the right one before adding
+it. If you already have the careers page open, paste the link instead. Either way it works
+for any industry, not just the ones in the catalog.
 
 Companies on Workday, Taleo, iCIMS, or a bespoke careers page cannot be read, because those
 do not expose a public cross-origin endpoint. There is no workaround that keeps the app

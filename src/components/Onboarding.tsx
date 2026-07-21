@@ -20,6 +20,7 @@ import type { Profile, SeniorityPref, Source, WorkMode } from "../lib/types";
 import { Mark } from "./ui";
 import { TagEditor } from "./TagEditor";
 import { SeniorityPicker, WorkModePicker } from "./ProfileFields";
+import { AddCompany } from "./AddCompany";
 
 const STEPS = ["Track", "Resume", "Target", "Companies"] as const;
 
@@ -28,12 +29,14 @@ export function Onboarding({
   onDone,
 }: {
   sources: Source[];
-  onDone: (profile: Profile, packs: string[]) => void;
+  onDone: (profile: Profile, packs: string[], custom: Source[]) => void;
 }) {
   const [step, setStep] = useState(0);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [packs, setPacks] = useState<string[]>([]);
   const [extraction, setExtraction] = useState<Extraction | null>(null);
+  /** Employers added by name or link during setup, on top of whatever packs are picked. */
+  const [custom, setCustom] = useState<Source[]>([]);
 
   const set = (patch: Partial<Profile>) =>
     setProfile((p) => (p ? { ...p, ...patch } : p));
@@ -59,7 +62,8 @@ export function Onboarding({
     set({ seniority: result.seniority });
   };
 
-  const companyCount = packs.reduce((n, p) => n + (countsByPack[p] ?? 0), 0);
+  const packCount = packs.reduce((n, p) => n + (countsByPack[p] ?? 0), 0);
+  const totalCompanies = packCount + custom.length;
 
   if (!profile) {
     return (
@@ -264,21 +268,38 @@ export function Onboarding({
             ))}
           </div>
 
+          {/* Offered here rather than only in Settings, because the shipped catalog will
+              never cover every field. Someone whose industry is thin needs to find that out
+              and fix it now, not after a first scan that came back nearly empty. */}
+          <hr
+            style={{
+              border: 0,
+              borderTop: "var(--border-hair) solid var(--c-border)",
+              margin: "var(--space-5) 0",
+            }}
+          />
+          <AddCompany sources={custom} onAdd={(added) => setCustom((prev) => [...prev, ...added])} />
+          {custom.length > 0 ? (
+            <p className="field__hint">
+              Added {custom.length}: {custom.map((s) => s.name).join(", ")}.
+            </p>
+          ) : null}
+
           <div className="wizard__nav">
             <button
               className="btn btn--primary"
-              disabled={companyCount === 0}
-              onClick={() => onDone(profile, packs)}
+              disabled={totalCompanies === 0}
+              onClick={() => onDone(profile, packs, custom)}
             >
-              Scan {companyCount} companies
+              Scan {totalCompanies} {totalCompanies === 1 ? "company" : "companies"}
             </button>
             <button className="btn btn--ghost" onClick={() => setStep(2)}>
               Back
             </button>
             <span className="field__hint">
-              {companyCount === 0
-                ? "Pick at least one group."
-                : `About ${Math.max(5, Math.round(companyCount * 0.7))} seconds.`}
+              {totalCompanies === 0
+                ? "Pick a group, or add an employer by name."
+                : `About ${Math.max(5, Math.round(totalCompanies * 0.7))} seconds.`}
             </span>
           </div>
         </section>

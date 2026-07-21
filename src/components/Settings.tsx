@@ -13,11 +13,12 @@
 import { useMemo, useState } from "react";
 import type { Profile, SeniorityPref, Source, WorkMode } from "../lib/types";
 import { PACKS, packLabel } from "../lib/catalog";
-import { ATS_LABEL, detectSource } from "../lib/ats";
+import { ATS_LABEL } from "../lib/ats";
 import { extractFromResume } from "../lib/extract";
 import type { Extraction } from "../lib/extract";
 import { Modal } from "./ui";
 import { TagEditor } from "./TagEditor";
+import { AddCompany } from "./AddCompany";
 import { SeniorityPicker, WorkModePicker } from "./ProfileFields";
 import { clearAll, clearResume, exportAll, importAll } from "../lib/storage";
 
@@ -238,8 +239,6 @@ function SeekingTab({ profile, onProfile }: { profile: Profile; onProfile: (p: P
 function CompaniesTab({ sources, onSources }: { sources: Source[]; onSources: (s: Source[]) => void }) {
   const [query, setQuery] = useState("");
   const [packFilter, setPackFilter] = useState("all");
-  const [addUrl, setAddUrl] = useState("");
-  const [addNote, setAddNote] = useState<{ kind: "ok" | "warn"; text: string } | null>(null);
 
   const enabledCount = sources.filter((s) => s.enabled).length;
 
@@ -259,90 +258,9 @@ function CompaniesTab({ sources, onSources }: { sources: Source[]; onSources: (s
     onSources(sources.map((s) => (ids.has(s.id) ? { ...s, enabled } : s)));
   };
 
-  /** Accepts a whole pasted block, one link per line, because adding twelve companies one
-   *  at a time is the kind of tedium that stops people from customizing at all. */
-  const add = () => {
-    const lines = addUrl.split(/[\n,\s]+/).map((l) => l.trim()).filter(Boolean);
-    if (!lines.length) return;
-
-    const known = new Set(sources.map((s) => s.id));
-    const added: Source[] = [];
-    const rejected: string[] = [];
-    let duplicates = 0;
-
-    for (const line of lines) {
-      const detected = detectSource(line);
-      if (!detected) {
-        rejected.push(line);
-        continue;
-      }
-      const id = `${detected.kind}:${detected.token}`;
-      if (known.has(id)) {
-        duplicates += 1;
-        continue;
-      }
-      known.add(id);
-      added.push({
-        id,
-        kind: detected.kind,
-        token: detected.token,
-        name: detected.token,
-        pack: "custom",
-        enabled: true,
-      });
-    }
-
-    if (added.length) onSources([...added, ...sources]);
-
-    const parts: string[] = [];
-    if (added.length) parts.push(`Added ${added.length}.`);
-    if (duplicates) parts.push(`${duplicates} already followed.`);
-    if (rejected.length) {
-      parts.push(
-        `Could not read ${rejected.length}: ${rejected.slice(0, 2).join(", ")}. Jobwatch reads Greenhouse, Lever, Ashby, SmartRecruiters, Workable, and Recruitee boards only.`,
-      );
-    }
-    setAddNote({ kind: rejected.length && !added.length ? "warn" : "ok", text: parts.join(" ") });
-    if (added.length) setAddUrl("");
-  };
-
   return (
     <div>
-      <div className="field tagfield">
-        <label className="field__label" htmlFor="addurl">
-          Add companies
-        </label>
-        <p className="field__hint">
-          Paste a link to any company's careers page, or several at once, one per line. It
-          works when their board is Greenhouse, Lever, Ashby, SmartRecruiters, Workable, or
-          Recruitee, which covers a large share of startups and mid-size companies. Try
-          jobs.lever.co/spotify or boards.greenhouse.io/figma.
-        </p>
-        <textarea
-          id="addurl"
-          className="textarea"
-          style={{ minHeight: 76 }}
-          value={addUrl}
-          placeholder={"https://boards.greenhouse.io/company\nhttps://jobs.lever.co/another"}
-          onChange={(e) => {
-            setAddUrl(e.target.value);
-            setAddNote(null);
-          }}
-        />
-        <div>
-          <button className="btn" onClick={add} disabled={!addUrl.trim()}>
-            Add
-          </button>
-        </div>
-        {addNote ? (
-          <p
-            className="field__hint"
-            style={{ color: addNote.kind === "warn" ? "var(--c-warn)" : "var(--c-text-muted)" }}
-          >
-            {addNote.text}
-          </p>
-        ) : null}
-      </div>
+      <AddCompany sources={sources} onAdd={(added) => onSources([...added, ...sources])} />
 
       <div className="toolbar">
         <div className="toolbar__search">

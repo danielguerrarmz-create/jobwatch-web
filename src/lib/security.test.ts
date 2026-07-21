@@ -19,6 +19,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { safeUrl, sanitizeHtml, toText } from "./sanitize";
 import { FetchError, fetchDetailHtml, fetchSource, isAllowedUrl, isValidToken } from "./ats";
 import { importAll, loadSeen, loadSources } from "./storage";
+import { extractFromResume } from "./extract";
 import type { Job, Source } from "./types";
 
 /* ------------------------------------------------------------------ helpers */
@@ -462,6 +463,59 @@ describe("localStorage as untrusted input", () => {
       localStorage.setItem("jobwatch.v1.sources", junk);
       expect(() => loadSeen()).not.toThrow();
       expect(() => loadSources()).not.toThrow();
+    }
+  });
+});
+
+/* ------------------------------------------------- 4. the resume parser */
+
+describe("the resume parser against adversarial paste", () => {
+  // The resume is the most sensitive thing this app holds and the only place where a large
+  // amount of arbitrary user text meets a pile of regexes. None of these should take
+  // meaningfully longer than an ordinary CV. A regression here shows up as the tab freezing
+  // while someone pastes, which reads as "this app is broken" rather than "this is an attack".
+  const cases: Array<[string, string]> = [
+    ["one long unbroken word", "a".repeat(200_000)],
+    ["repeated plus-years claims", "5+ years ".repeat(22_000)],
+    // The case that motivated the fix in parseYears: every match is discarded as
+    // out-of-range, so a guard counting kept results instead of matches examined never fires.
+    ["years claims that are all discarded", "999 years of experience ".repeat(9_000)],
+    ["range claims", "5-7 years ".repeat(20_000)],
+    ["repeated role titles", "Senior Product Designer ".repeat(8_000)],
+    ["dense vocabulary hits", "Figma React Python TypeScript ".repeat(7_000)],
+    ["whitespace and punctuation only", " ,-\t\n".repeat(40_000)],
+    ["title-gap characters", "a-b-c-d-e-f ".repeat(16_000)],
+    ["possessive role nouns", "designer's engineer's analyst's ".repeat(6_000)],
+    ["unicode dashes in year ranges", "5–7 years — ".repeat(15_000)],
+  ];
+
+  it.each(cases)("stays fast on %s", (_name, text) => {
+    const started = Date.now();
+    const out = extractFromResume(text);
+    const elapsed = Date.now() - started;
+
+    expect(elapsed).toBeLessThan(2000);
+    // Output is bounded too, so a pathological paste cannot turn into a 50k-checkbox screen.
+    expect(out.titles.length).toBeLessThanOrEqual(60);
+    expect(out.skills.length).toBeLessThanOrEqual(60);
+    expect(out.years === null || (out.years > 0 && out.years <= 60)).toBe(true);
+  });
+
+  it("truncates rather than parsing an unbounded paste", () => {
+    const started = Date.now();
+    extractFromResume("Senior Product Designer at Figma. ".repeat(200_000));
+    expect(Date.now() - started).toBeLessThan(3000);
+  });
+
+  it("never returns the resume text itself in a suggestion", () => {
+    // Suggestions are rendered in the UI and could end up in a screenshot or a bug report.
+    // Evidence snippets are deliberately short; a whole resume leaking into one would be a
+    // privacy regression, not just a layout one.
+    const resume = "Jane Doe, 555-867-5309, jane@example.com\nSenior Product Designer at Figma.";
+    const out = extractFromResume(resume);
+    for (const s of [...out.titles, ...out.skills]) {
+      expect(s.evidence.length).toBeLessThanOrEqual(80);
+      expect(s.evidence).not.toContain("555-867-5309");
     }
   });
 });
