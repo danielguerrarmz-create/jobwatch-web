@@ -81,6 +81,7 @@ export function loadProfile(fallback: Profile): Profile {
 
   return {
     resume: typeof o.resume === "string" ? o.resume.slice(0, MAX_RESUME) : "",
+    rememberResume: o.rememberResume !== false,
     headline: typeof o.headline === "string" ? o.headline.slice(0, 200) : "",
     skills: strList(o.skills),
     seniority: SENIORITY.includes(o.seniority as SeniorityPref)
@@ -97,7 +98,14 @@ export function loadProfile(fallback: Profile): Profile {
   };
 }
 
-export const saveProfile = (p: Profile): void => write(KEYS.profile, p);
+/**
+ * Persist the profile, honouring `rememberResume`.
+ *
+ * The check lives here rather than at the call sites because this is the only function that
+ * can write a resume to disk. A component that forgets the flag cannot leak past it.
+ */
+export const saveProfile = (p: Profile): void =>
+  write(KEYS.profile, p.rememberResume ? p : { ...p, resume: "" });
 
 /** Erase the resume alone, without touching the keywords derived from it. Someone on a
  *  shared or borrowed machine should be able to drop the sensitive part and keep the setup. */

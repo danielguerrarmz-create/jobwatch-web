@@ -11,6 +11,7 @@ import type { Job, Profile } from "./types";
 
 const baseProfile: Profile = {
   resume: "",
+  rememberResume: true,
   headline: "",
   targetTitles: ["product designer", "design technologist"],
   skills: ["figma", "rhino"],

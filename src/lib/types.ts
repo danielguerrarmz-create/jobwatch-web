@@ -98,9 +98,22 @@ export interface Profile {
   /**
    * The pasted resume, plain text. This never leaves the browser and is never sent
    * anywhere: it exists only so keywords can be suggested from it and so the user can
-   * re-run that suggestion later. Storing it is opt-in and clearable on its own.
+   * re-run that suggestion later.
+   *
+   * Pasting it stores it, unless `rememberResume` is off. It is clearable on its own
+   * without losing the rest of the setup, and is excluded from backup exports unless the
+   * user explicitly ticks the box.
    */
   resume: string;
+  /**
+   * Whether the resume may be written to this browser's storage at all.
+   *
+   * Off means the text lives only in memory for this visit and is gone when the tab closes,
+   * while the titles and skills pulled out of it are kept. That is the right default posture
+   * on a shared, borrowed, or public machine, and making it a decision up front is better
+   * than relying on someone remembering to press Erase on their way out.
+   */
+  rememberResume: boolean;
   /** A one-line self-description, shown nowhere but the settings screen. Purely for the
    *  user's own orientation when they come back to this in three weeks. */
   headline: string;

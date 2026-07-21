@@ -147,6 +147,14 @@ export function AddCompany({
             all six systems it can read. Check the result before adding it: different companies
             sometimes share a name.
           </p>
+          {/* Said plainly because it is the one place the app's privacy claim needs a
+              caveat. A search is a lookup against all six vendors, so five of them see a
+              name that has nothing to do with them. Pasting a link does not do that. */}
+          <p className="field__hint">
+            Searching checks all six job-board systems, so the name you type is sent to each of
+            them as a lookup. Pasting a link instead only contacts the one board that link
+            points to.
+          </p>
           <div style={{ display: "flex", gap: "var(--space-2)" }}>
             <label className="visually-hidden" htmlFor="discover">
               Company name

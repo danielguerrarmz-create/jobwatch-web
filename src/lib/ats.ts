@@ -200,7 +200,9 @@ function makeJob(source: Source, raw: {
 
 /* ----------------------------------------------------------------- adapters */
 
-type Adapter = (source: Source, signal?: AbortSignal) => Promise<Job[]>;
+/** `firstPageOnly` is used by company discovery, which only needs to know whether a board
+ *  exists and what it is called, not to enumerate every posting on it. */
+type Adapter = (source: Source, signal?: AbortSignal, firstPageOnly?: boolean) => Promise<Job[]>;
 
 const greenhouse: Adapter = async (source, signal) => {
   const url = `https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(source.token)}/jobs?content=true`;
@@ -269,7 +271,7 @@ const ashby: Adapter = async (source, signal) => {
     .filter((j): j is Job => j !== null);
 };
 
-const smartrecruiters: Adapter = async (source, signal) => {
+const smartrecruiters: Adapter = async (source, signal, firstPageOnly) => {
   // This board pages, and the list view carries no description, so we score SmartRecruiters
   // roles on title/department/location and pull the body lazily when a card is opened.
   const out: Job[] = [];
@@ -296,7 +298,7 @@ const smartrecruiters: Adapter = async (source, signal) => {
       });
       if (built) out.push(built);
     }
-    if (page.length < PAGE) break;
+    if (page.length < PAGE || firstPageOnly) break;
   }
   return out;
 };
@@ -351,14 +353,24 @@ const ADAPTERS: Record<AtsKind, Adapter> = {
   recruitee,
 };
 
-/** Fetch one source. Throws `FetchError` with a human-readable reason on failure. */
-export function fetchSource(source: Source, signal?: AbortSignal): Promise<Job[]> {
+/**
+ * Fetch one source. Throws `FetchError` with a human-readable reason on failure.
+ *
+ * `firstPageOnly` exists for discovery probes. Only SmartRecruiters pages, and a probe that
+ * walked all five pages would turn a single company search into dozens of requests against
+ * boards that mostly are not going to match anyway.
+ */
+export function fetchSource(
+  source: Source,
+  signal?: AbortSignal,
+  firstPageOnly = false,
+): Promise<Job[]> {
   if (!isValidToken(source.token)) {
     return Promise.reject(new FetchError("invalid company token"));
   }
   const adapter = ADAPTERS[source.kind];
   if (!adapter) return Promise.reject(new FetchError(`unsupported board: ${source.kind}`));
-  return adapter(source, signal);
+  return adapter(source, signal, firstPageOnly);
 }
 
 /**

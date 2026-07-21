@@ -74,7 +74,9 @@ function probeSource(kind: AtsKind, token: string): Source {
 async function probe(kind: AtsKind, token: string, signal?: AbortSignal): Promise<Candidate | null> {
   let jobs: Job[];
   try {
-    jobs = await fetchSource(probeSource(kind, token), signal);
+    // First page only: a probe answers "does this board exist and whose is it", so paging
+    // through every posting would multiply the request count for no extra signal.
+    jobs = await fetchSource(probeSource(kind, token), signal, true);
   } catch {
     return null; // A miss is the normal case here, not an error worth surfacing.
   }

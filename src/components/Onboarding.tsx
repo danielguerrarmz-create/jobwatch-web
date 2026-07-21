@@ -73,8 +73,9 @@ export function Onboarding({
         <p className="onboard__lede">
           Job postings read straight from the companies themselves, not from a job board.
           No account and no server: your resume, your keywords, and everything you save stay
-          in this browser. The only thing that leaves is the request to each company's own
-          job board, exactly as if you had opened their careers page yourself.
+          in this browser. The only thing that leaves is the request to the job boards
+          themselves, the same request your browser would make if you opened those careers
+          pages yourself.
         </p>
         <section className="panel">
           <p className="stepnum">Step 1 of 4</p>
@@ -125,6 +126,22 @@ export function Onboarding({
               you tick a box.
             </span>
           </div>
+
+          <label className="checkline" style={{ marginBottom: "var(--space-4)" }}>
+            <input
+              type="checkbox"
+              checked={!profile.rememberResume}
+              onChange={(e) => set({ rememberResume: !e.target.checked })}
+            />
+            <span>
+              Do not save it on this computer
+              <span className="field__hint">
+                {" "}
+                Tick this on a shared or borrowed machine. Jobwatch still reads it now, but the
+                text is gone when you close the tab.
+              </span>
+            </span>
+          </label>
 
           <div className="field">
             <label className="field__label" htmlFor="resume">

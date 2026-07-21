@@ -95,12 +95,29 @@ function YouTab({ profile, onProfile }: { profile: Profile; onProfile: (p: Profi
 
       <div className="privacynote">
         <span>
-          <strong>Your resume stays on this machine.</strong> It is kept in this browser's
-          local storage and is never sent anywhere, because there is no server to send it to.
-          Erase it below without losing the rest of your setup, and note that anyone with
-          access to this browser profile can read it.
+          <strong>Your resume stays on this machine.</strong> It is never sent anywhere,
+          because there is no server to send it to. It is kept in this browser's local
+          storage, which means anyone with access to this browser profile can read it, and so
+          can browser extensions you have installed. Erase it below without losing the rest of
+          your setup, or keep it out of storage entirely with the option under it.
         </span>
       </div>
+
+      <label className="checkline" style={{ marginBottom: "var(--space-4)" }}>
+        <input
+          type="checkbox"
+          checked={!profile.rememberResume}
+          onChange={(e) => set({ rememberResume: !e.target.checked })}
+        />
+        <span>
+          Do not save my resume on this computer
+          <span className="field__hint">
+            {" "}
+            For a shared, borrowed, or public machine. The text is used for suggestions now
+            and is gone when you close the tab. The skills and titles you add from it stay.
+          </span>
+        </span>
+      </label>
 
       <div className="field tagfield">
         <label className="field__label" htmlFor="resume-edit">
@@ -355,7 +372,9 @@ function DataTab({ profile, onProfile }: { profile: Profile; onProfile: (p: Prof
     a.href = url;
     a.download = `jobwatch-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
-    URL.revokeObjectURL(url);
+    // Not revoked immediately: some browsers have not started reading the blob by the time
+    // click() returns, and revoking first cancels the download.
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
   };
 
   const upload = (file: File) => {

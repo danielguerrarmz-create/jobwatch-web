@@ -34,6 +34,17 @@ interface CompiledKeyword {
   re: RegExp;
 }
 
+/**
+ * Ceiling on how many keywords one list may contribute.
+ *
+ * Scoring cost is keywords times postings, and a scan routinely reads ten thousand
+ * postings. The realistic way to blow past a sane count is not deliberate: the chip editor
+ * splits pasted text on commas, so pasting a resume into the skills box turns into hundreds
+ * of keywords in one gesture. Bounding it here rather than in the UI means every path into
+ * the matcher is covered, including a restored backup.
+ */
+const MAX_KEYWORDS = 400;
+
 function compile(keywords: string[]): CompiledKeyword[] {
   const seen = new Set<string>();
   const out: CompiledKeyword[] = [];
@@ -48,6 +59,7 @@ function compile(keywords: string[]): CompiledKeyword[] {
     } catch {
       // A keyword that cannot compile is skipped rather than killing the whole run.
     }
+    if (out.length >= MAX_KEYWORDS) break;
   }
   return out;
 }
