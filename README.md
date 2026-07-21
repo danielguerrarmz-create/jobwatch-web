@@ -62,7 +62,11 @@ Then scan.
 | Workable | Common in Europe and at SMBs |
 | Recruitee | Common in Europe |
 
-The catalog that ships is a starting point, not the boundary. **Type any employer name and
+455 employers ship in the catalog across 19 industries, every one verified against its live
+board. That includes hospitals, universities, retailers, banks, hotels, manufacturers, and
+public agencies, not just tech companies.
+
+The catalog is a starting point, not the boundary. **Type any employer name and
 Jobwatch goes looking for their job board** across all six systems, then shows you the
 company name and a few real openings so you can confirm it found the right one before adding
 it. If you already have the careers page open, paste the link instead. Either way it works
