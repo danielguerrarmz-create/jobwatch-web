@@ -68,7 +68,9 @@ export function Onboarding({
         <h1 className="onboard__title">Jobwatch</h1>
         <p className="onboard__lede">
           Job postings read straight from the companies themselves, not from a job board.
-          No account, no server, and nothing that leaves your browser.
+          No account and no server: your resume, your keywords, and everything you save stay
+          in this browser. The only thing that leaves is the request to each company's own
+          job board, exactly as if you had opened their careers page yourself.
         </p>
         <section className="panel">
           <p className="stepnum">Step 1 of 4</p>

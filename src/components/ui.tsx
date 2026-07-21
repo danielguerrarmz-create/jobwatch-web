@@ -4,15 +4,23 @@ import { useCallback, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import type { FitBand } from "../lib/types";
 
-/** The Jobwatch mark. Inlined rather than an <img> so it inherits `currentColor` and
- *  renders correctly in both themes without a second asset. */
+/**
+ * The Jobwatch mark: an aperture ring left open at the bottom.
+ *
+ * Inlined rather than an `<img>` so it inherits `currentColor` and renders in both themes
+ * from one asset. Keep it in sync with `brand/logo-mark.svg`.
+ *
+ * An earlier version put a leader line projecting from the ring at the upper right, which
+ * read unmistakably as the Mars glyph. Nothing here should project outward from the circle.
+ */
 export function Mark({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 36 36" fill="none" role="img" aria-label="Jobwatch">
-      <circle cx="18" cy="18" r="10" stroke="currentColor" strokeWidth="2.5" />
-      <line
-        x1="25.96" y1="10.05" x2="29.49" y2="6.51"
-        stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+      <path
+        d="M 14.58 27.40 A 10 10 0 1 1 21.42 27.40"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="butt"
       />
     </svg>
   );

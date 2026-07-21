@@ -65,11 +65,20 @@ export default function App() {
 
   /* -------------------------------------------------------------------- theme */
 
+  // The *effective* theme, which is not the same as the stored preference: "system" resolves
+  // against the OS. Tracking it in state matters because the toggle has to flip what the user
+  // is actually looking at. Flipping the preference instead means the first click on a
+  // dark-by-system machine sets the preference to "dark" and visibly does nothing.
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(
+    () => (document.documentElement.dataset.theme === "dark" ? "dark" : "light"),
+  );
+
   useEffect(() => {
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const apply = () => {
       const dark = meta.theme === "dark" || (meta.theme === "system" && media.matches);
       document.documentElement.dataset.theme = dark ? "dark" : "light";
+      setResolvedTheme(dark ? "dark" : "light");
     };
     apply();
     media.addEventListener("change", apply);
@@ -105,6 +114,28 @@ export default function App() {
   );
 
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  /**
+   * Scan once when a returning user opens the app.
+   *
+   * Results are not persisted between visits (a few thousand postings with descriptions
+   * would not fit in localStorage, and stale results are worse than none for a tool whose
+   * whole job is telling you what changed). So without this, opening Jobwatch shows an
+   * empty board and a button, which is a poor greeting for a product named "watch".
+   *
+   * The ref guard is load-bearing: StrictMode mounts twice in development, and without it
+   * every dev reload would fire two full scans at other people's servers.
+   */
+  const autoScanned = useRef(false);
+  useEffect(() => {
+    if (autoScanned.current || !meta.onboarded) return;
+    if (!sources.some((s) => s.enabled)) return;
+    autoScanned.current = true;
+    void scan(sources, profile);
+    // Deliberately mount-only. Re-running on every sources/profile edit would scan on
+    // each keystroke in Settings.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const finishOnboarding = (chosenProfile: Profile, packs: string[]) => {
     const chosen = new Set(packs);
@@ -159,11 +190,11 @@ export default function App() {
 
         <button
           className="btn btn--ghost"
-          onClick={() => setMeta((m) => ({ ...m, theme: m.theme === "dark" ? "light" : "dark" }))}
-          aria-label="Switch between light and dark"
-          title="Switch between light and dark"
+          onClick={() => setMeta((m) => ({ ...m, theme: resolvedTheme === "dark" ? "light" : "dark" }))}
+          aria-label={`Switch to ${resolvedTheme === "dark" ? "light" : "dark"} mode`}
+          title={`Switch to ${resolvedTheme === "dark" ? "light" : "dark"} mode`}
         >
-          {document.documentElement.dataset.theme === "dark" ? "☀" : "☾"}
+          {resolvedTheme === "dark" ? "☀" : "☾"}
         </button>
         <button className="btn" onClick={() => setSettingsOpen(true)}>
           Settings

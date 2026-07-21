@@ -327,10 +327,20 @@ function tokenize(text: string): Token[] {
   return tokens;
 }
 
+const WHITESPACE_RE = /\s/;
+
+/** How far to look for dropped content when deciding whether an ellipsis is honest.
+ *  Bounded, because a 200k paste with no newlines would otherwise be scanned in full. */
+const ELLIPSIS_LOOKAROUND = 200;
+
 /**
  * A short verbatim snippet centered on a match, clipped to the line it sits on so the
  * quote never stitches two unrelated bullets together. Internal whitespace is collapsed
  * for display; the words themselves are exactly what the user wrote.
+ *
+ * Both cuts land on whitespace. Slicing on a raw character offset produces quotes that
+ * open on the tail of a word ("...esign technology"), which reads like a bug in the app
+ * rather than a quote from the resume, and undermines the one thing evidence is for.
  */
 function evidenceAt(text: string, index: number, length: number, width = EVIDENCE_MAX): string {
   // Leave room for the two ellipses so the result can never exceed `width`.
@@ -338,17 +348,43 @@ function evidenceAt(text: string, index: number, length: number, width = EVIDENC
   const lineStart = text.lastIndexOf("\n", index) + 1;
   const nextBreak = text.indexOf("\n", index + length);
   const lineEnd = nextBreak < 0 ? text.length : nextBreak;
+  const matchEnd = Math.min(lineEnd, index + length);
 
   // Pull back a little so the match is not flush against the left edge of the quote.
   let start = Math.max(lineStart, index - 24);
   let end = Math.min(lineEnd, start + budget);
   if (end - start < budget) start = Math.max(lineStart, end - budget);
 
+  // Walk the left cut forward to the next gap. Forward rather than backward because
+  // backward would blow the width budget. Never past the match itself: showing half a
+  // word is bad, hiding the thing being quoted is worse, so a match glued to the
+  // preceding text (a slash-separated list, say) keeps the raw cut.
+  if (start > lineStart && !WHITESPACE_RE.test(text[start - 1]) && !WHITESPACE_RE.test(text[start])) {
+    let cut = start;
+    while (cut < index && !WHITESPACE_RE.test(text[cut])) cut += 1;
+    if (cut < index) start = cut;
+  }
+
+  // Walk the right cut backward to the previous gap, under the same rule.
+  if (end < lineEnd && !WHITESPACE_RE.test(text[end - 1]) && !WHITESPACE_RE.test(text[end])) {
+    let cut = end;
+    while (cut > matchEnd && !WHITESPACE_RE.test(text[cut - 1])) cut -= 1;
+    if (cut > matchEnd) end = cut;
+  }
+
   const body = text.slice(start, end).replace(/[ \t\r\f\v]+/g, " ").trim();
   if (!body) return "";
-  const prefix = start > lineStart ? "…" : "";
-  const suffix = end < lineEnd ? "…" : "";
-  return prefix + body + suffix;
+
+  // An ellipsis is a claim that something was cut. Indentation and trailing spaces are
+  // not something, so the marker only appears when real text was dropped.
+  const droppedBefore = text
+    .slice(Math.max(lineStart, start - ELLIPSIS_LOOKAROUND), start)
+    .trim() !== "";
+  const droppedAfter = text
+    .slice(end, Math.min(lineEnd, end + ELLIPSIS_LOOKAROUND))
+    .trim() !== "";
+
+  return `${droppedBefore ? "…" : ""}${body}${droppedAfter ? "…" : ""}`;
 }
 
 function bySuggestionRank(a: Suggestion, b: Suggestion): number {

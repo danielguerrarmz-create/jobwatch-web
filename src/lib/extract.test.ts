@@ -14,6 +14,27 @@ const countOf = (list: Suggestion[], value: string) =>
 
 const THIS_YEAR = new Date().getFullYear();
 
+/**
+ * The core promise of an evidence string: it is a whole fragment of what the user wrote.
+ * Strip the truncation marks, find the remainder in the source, and require a gap or an
+ * edge on both sides. A quote that opens on "esign" reads as a bug in the app, not as a
+ * quote from the resume.
+ */
+function expectWholeWords(evidence: string, source: string): void {
+  const quoted = evidence.replace(/^…/, "").replace(/…$/, "");
+  expect(quoted.length).toBeGreaterThan(0);
+  const at = source.indexOf(quoted);
+  expect(at, `not found verbatim in the source: ${quoted}`).toBeGreaterThanOrEqual(0);
+  expect(at === 0 || /\s/.test(source[at - 1]), `starts mid word: ${evidence}`).toBe(true);
+  const after = at + quoted.length;
+  expect(after === source.length || /\s/.test(source[after]), `ends mid word: ${evidence}`).toBe(true);
+}
+
+/** The seniority reason embeds its quote in double quotes. */
+function reasonQuote(reason: string): string {
+  return reason.match(/"([^"]*)"/)?.[1] ?? "";
+}
+
 const SOFTWARE_RESUME = `JORDAN MARSH
 Senior Software Engineer
 
@@ -223,10 +244,60 @@ describe("evidence", () => {
 
   it("truncates a long line around the match instead of quoting the whole thing", () => {
     const filler = "context words that go on and on ".repeat(6);
-    const evidence = extractFromResume(`${filler}Figma ${filler}`).skills[0].evidence;
+    const source = `${filler}Figma ${filler}`;
+    const evidence = extractFromResume(source).skills[0].evidence;
     expect(evidence.length).toBeLessThanOrEqual(80);
     expect(evidence).toContain("Figma");
     expect(evidence.startsWith("…")).toBe(true);
+    expect(evidence.endsWith("…")).toBe(true);
+    expectWholeWords(evidence, source);
+  });
+
+  it("never begins or ends a snippet on a partial word", () => {
+    for (const resume of [SOFTWARE_RESUME, DESIGN_RESUME, AEC_RESUME]) {
+      const { skills, titles, seniorityReason } = extractFromResume(resume);
+      for (const s of [...skills, ...titles]) expectWholeWords(s.evidence, resume);
+      expectWholeWords(reasonQuote(seniorityReason), resume);
+    }
+  });
+
+  it("cuts the seniority quote on a word boundary on a long line", () => {
+    // The live defect: a raw character offset opened the quote inside "design".
+    const source =
+      `Studio work spanning parametric geometry, digital fabrication, and design technology. ` +
+      `B.Arch, graduating May ${THIS_YEAR}.`;
+    const quote = reasonQuote(extractFromResume(source).seniorityReason);
+    expect(quote).toContain("graduating");
+    expect(quote.startsWith("…esign")).toBe(false);
+    expectWholeWords(quote, source);
+  });
+
+  it("snips both ends on a word boundary when the match sits mid line", () => {
+    const source = `${"long winded preamble ".repeat(6)}Grasshopper${" and more prose".repeat(6)}`;
+    const evidence = extractFromResume(source).skills[0].evidence;
+    expect(evidence.startsWith("…")).toBe(true);
+    expect(evidence.endsWith("…")).toBe(true);
+    expectWholeWords(evidence, source);
+  });
+
+  it("keeps the match visible even when it is glued to the text in front of it", () => {
+    // ".NET" is the case that can actually happen: it carries no left word boundary, so it
+    // matches inside a run of characters with no gap to snap to. Losing the term would be
+    // worse than an untidy left edge, so the raw cut stands.
+    const source = `${"x".repeat(120)}.NET ${"y".repeat(120)}`;
+    const evidence = extractFromResume(source).skills.find((s) => s.value === ".NET")?.evidence ?? "";
+    expect(evidence).toContain(".NET");
+    expect(evidence.length).toBeLessThanOrEqual(80);
+    // The right edge has a gap available, so that end is still snapped clean.
+    expect(evidence.endsWith("…")).toBe(true);
+    expect(evidence.replace(/…$/, "").endsWith(".NET")).toBe(true);
+  });
+
+  it("does not claim a truncation when only indentation was dropped", () => {
+    const source = `${" ".repeat(40)}Figma ${"and other tools ".repeat(10)}`;
+    const evidence = extractFromResume(source).skills[0].evidence;
+    expect(evidence.startsWith("…")).toBe(false);
+    expect(evidence.startsWith("Figma")).toBe(true);
     expect(evidence.endsWith("…")).toBe(true);
   });
 });

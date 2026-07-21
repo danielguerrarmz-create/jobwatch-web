@@ -18,7 +18,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { safeUrl, sanitizeHtml, toText } from "./sanitize";
 import { FetchError, fetchDetailHtml, fetchSource, isAllowedUrl, isValidToken } from "./ats";
-import { loadSeen, loadSources } from "./storage";
+import { importAll, loadSeen, loadSources } from "./storage";
 import type { Job, Source } from "./types";
 
 /* ------------------------------------------------------------------ helpers */
@@ -463,5 +463,58 @@ describe("localStorage as untrusted input", () => {
       expect(() => loadSeen()).not.toThrow();
       expect(() => loadSources()).not.toThrow();
     }
+  });
+});
+
+describe("importing a backup someone else wrote", () => {
+  it("refuses a file that is not a Jobwatch backup instead of reloading into nothing", () => {
+    expect(importAll("not json")).toBe(false);
+    expect(importAll("[]")).toBe(false);
+    expect(importAll("null")).toBe(false);
+    expect(importAll('"a string"')).toBe(false);
+    expect(importAll("{}")).toBe(false);
+    expect(importAll('{"somethingElse":1}')).toBe(false);
+  });
+
+  it("refuses a file too large to be anyone's job search", () => {
+    expect(importAll(`{"seen":{"a":"${"x".repeat(20 * 1024 * 1024)}"}}`)).toBe(false);
+  });
+
+  it("does not store a seen ledger big enough to hang the next load", () => {
+    // Import writes and then reloads, so an unbounded blob here would be re-read on every
+    // visit from then on, with the settings screen that could undo it behind that same load.
+    const huge: Record<string, string> = {};
+    for (let i = 0; i < 60_000; i += 1) huge[`greenhouse:acme:${i}`] = "2026-01-01";
+
+    expect(importAll(JSON.stringify({ seen: huge }))).toBe(true);
+    expect(Object.keys(loadSeen()).length).toBeLessThanOrEqual(40_000);
+  });
+
+  it("does not let an imported file put a wrong-typed blob into the store", () => {
+    expect(
+      importAll(JSON.stringify({ profile: "hijacked", sources: "hijacked", saved: { a: 1 }, meta: [] })),
+    ).toBe(false);
+    expect(localStorage.getItem("jobwatch.v1.profile")).toBeNull();
+    expect(localStorage.getItem("jobwatch.v1.sources")).toBeNull();
+    expect(localStorage.getItem("jobwatch.v1.saved")).toBeNull();
+    expect(localStorage.getItem("jobwatch.v1.meta")).toBeNull();
+  });
+
+  it("still cannot smuggle a fetchable token in through a backup", () => {
+    expect(
+      importAll(
+        JSON.stringify({
+          sources: [{ kind: "greenhouse", token: "../../evil", name: "x", pack: "custom", enabled: true }],
+        }),
+      ),
+    ).toBe(true);
+    expect(loadSources()).toEqual([]);
+  });
+
+  it("keeps an imported __proto__ key off Object.prototype", () => {
+    expect(importAll('{"seen":{"__proto__":"2026-01-01"}}')).toBe(true);
+    const seen = loadSeen();
+    expect(Object.getPrototypeOf(seen)).toBeNull();
+    expect(({} as Record<string, unknown>)["2026-01-01"]).toBeUndefined();
   });
 });
