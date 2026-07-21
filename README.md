@@ -1,6 +1,6 @@
 <div align="center">
   <img src="brand/logo-lockup.svg" alt="Jobwatch" width="220">
-  <p><strong>Job postings read straight from the source. Nothing leaves your browser.</strong></p>
+  <p><strong>Job postings read straight from the source. Your resume and keywords never leave your machine.</strong></p>
 </div>
 
 ---
@@ -9,7 +9,8 @@ Jobwatch fetches live postings directly from the applicant tracking systems comp
 actually use. No job-board reposts, no expired listings pretending to be open. Every match
 is scored against your own keywords with plain, visible logic, so you can always see exactly
 why something ranked where it did. Your profile, your resume, your saved jobs, and your
-history all stay in your browser. Nothing is uploaded anywhere.
+history all stay in your browser. The only thing that leaves is the request to each
+company's own job board, exactly as if you had opened their careers page yourself.
 
 ## Why this exists
 

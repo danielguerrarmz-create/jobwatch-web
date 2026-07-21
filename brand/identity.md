@@ -11,7 +11,8 @@
 > to be open. Every match is scored against your own keywords with plain,
 > visible logic, so you can see exactly why something ranked where it did.
 > Everything, your profile, your saved jobs, your history, stays in your
-> browser. Nothing is uploaded anywhere.
+> browser. The only thing that leaves is the request to each company's own job
+> board, exactly as if you had opened their careers page yourself.
 
 **The wedge:** general job boards are adversarial by construction, SEO
 farming, reposted listings, ghost jobs kept up for lead generation. Jobwatch
