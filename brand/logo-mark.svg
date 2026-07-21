@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" fill="none" role="img" aria-label="Jobwatch">
+  <!-- The notch: an aperture ring with one deliberate opening at the
+       bottom, a single point where the circle admits the outside world
+       instead of closing on itself. Flat-cut ends read as machined, not
+       soft. No element projects outward from the ring, so nothing here
+       reads as a directional glyph. -->
+  <path d="M 14.58 27.40 A 10 10 0 1 1 21.42 27.40"
+        stroke="currentColor" stroke-width="2.5" stroke-linecap="butt"/>
+</svg>

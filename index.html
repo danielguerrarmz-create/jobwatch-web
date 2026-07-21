@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <title>Jobwatch</title>
+    <meta
+      name="description"
+      content="Jobwatch reads job postings straight from the source and tells you exactly what's new. No account, no server, nothing leaves your browser."
+    />
+    <meta name="referrer" content="no-referrer" />
+    <script>
+      // Set the theme before first paint so a dark-mode user never gets a white flash.
+      // Inline and tiny on purpose; it must run before the stylesheet resolves.
+      (function () {
+        try {
+          var meta = JSON.parse(localStorage.getItem("jobwatch.v1.meta") || "{}");
+          var pref = meta.theme || "system";
+          var dark =
+            pref === "dark" ||
+            (pref === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.dataset.theme = dark ? "dark" : "light";
+        } catch (e) {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>
+      Jobwatch runs entirely in your browser, so it needs JavaScript enabled. Nothing is sent
+      to a server either way.
+    </noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 172 36" fill="none" role="img" aria-label="Jobwatch">
+  <path d="M 14.58 27.40 A 10 10 0 1 1 21.42 27.40"
+        stroke="currentColor" stroke-width="2.5" stroke-linecap="butt"/>
+  <text x="42" y="24" fill="currentColor"
+        font-family="system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+        font-size="20" font-weight="600" letter-spacing="-0.3">Jobwatch</text>
+</svg>

@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jobwatch — brand preview</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--c-surface);
+    color: var(--c-text);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--leading-base);
+  }
+  main {
+    max-width: var(--max-content);
+    margin: 0 auto;
+    padding: var(--space-7) var(--space-5) var(--space-8);
+  }
+  h1, h2, h3 { font-weight: var(--weight-semibold); margin: 0; }
+  h1 { font-size: var(--text-2xl); letter-spacing: -0.02em; }
+  h2 {
+    font-size: var(--text-xs);
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-caps);
+    color: var(--c-text-muted);
+    margin-bottom: var(--space-3);
+  }
+  section { margin-top: var(--space-8); }
+  section:first-of-type { margin-top: var(--space-6); }
+  p.lede {
+    color: var(--c-text-muted);
+    font-size: var(--text-md);
+    max-width: 640px;
+    margin: var(--space-2) 0 0;
+  }
+
+  /* --- top bar / theme toggle --- */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--space-4);
+  }
+  .logo-row { display: flex; align-items: center; gap: var(--space-3); color: var(--c-text); }
+  button.toggle {
+    height: var(--control-h);
+    padding: 0 var(--space-4);
+    border-radius: var(--radius-sm);
+    border: var(--border-hair) solid var(--c-border-strong);
+    background: var(--c-surface-raised);
+    color: var(--c-text);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    cursor: pointer;
+  }
+  button.toggle:hover { border-color: var(--c-accent); }
+  button.toggle:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--c-surface), 0 0 0 4px var(--c-accent);
+  }
+
+  /* --- logo size ladder --- */
+  .logo-ladder {
+    display: flex; align-items: flex-end; gap: var(--space-6);
+    padding: var(--space-5);
+    background: var(--c-surface-raised);
+    border: var(--border-hair) solid var(--c-border);
+    border-radius: var(--radius-md);
+  }
+  .logo-cell { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); color: var(--c-text); }
+  .logo-cell span {
+    font-family: var(--font-mono); font-size: var(--text-xs); color: var(--c-text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* --- palette swatches --- */
+  .swatch-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: var(--space-3);
+  }
+  .swatch {
+    border-radius: var(--radius-md);
+    border: var(--border-hair) solid var(--c-border);
+    overflow: hidden;
+  }
+  .swatch-fill {
+    height: 64px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-weight: var(--weight-semibold);
+    font-size: var(--text-md);
+  }
+  .swatch-meta {
+    padding: var(--space-2) var(--space-3);
+    background: var(--c-surface-raised);
+    font-family: var(--font-mono); font-size: var(--text-xs);
+    color: var(--c-text-muted);
+    display: flex; justify-content: space-between; gap: var(--space-2);
+  }
+  .swatch-meta b { color: var(--c-text); font-weight: var(--weight-med); }
+
+  /* --- type scale --- */
+  .type-row {
+    display: flex; align-items: baseline; gap: var(--space-4);
+    padding: var(--space-2) 0;
+    border-bottom: var(--border-hair) solid var(--c-border);
+  }
+  .type-row:last-child { border-bottom: none; }
+  .type-row .tag {
+    font-family: var(--font-mono); font-size: var(--text-xs); color: var(--c-text-muted);
+    width: 120px; flex-shrink: 0;
+  }
+
+  /* --- job card --- */
+  .job-card {
+    display: grid;
+    grid-template-columns: auto auto 1fr auto;
+    gap: var(--space-4);
+    align-items: center;
+    padding: var(--row-pad-y) var(--space-4);
+    background: var(--c-surface-raised);
+    border: var(--border-hair) solid var(--c-border);
+    border-radius: var(--radius-md);
+  }
+  .job-card + .job-card { margin-top: var(--space-2); }
+  .match-dot {
+    width: 10px; height: 10px; border-radius: var(--radius-pill);
+    background: var(--c-fit-strong-fg);
+  }
+  .job-main .title { font-weight: var(--weight-med); }
+  .job-main .meta {
+    font-family: var(--font-mono); font-size: var(--text-sm); color: var(--c-text-muted);
+    margin-top: 2px;
+  }
+  .job-side {
+    font-family: var(--font-mono); font-size: var(--text-sm); color: var(--c-text-muted);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .new-tag {
+    font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-semibold);
+    color: var(--c-fresh-fg); background: var(--c-fresh-bg);
+    padding: 1px 6px; border-radius: var(--radius-sm);
+    letter-spacing: var(--tracking-caps);
+  }
+
+  /* --- chip rows --- */
+  .chip-row { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+  .chip {
+    font-family: var(--font-mono); font-size: var(--text-sm); font-weight: var(--weight-med);
+    padding: 6px 12px; border-radius: var(--radius-sm);
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <div class="topbar">
+    <div class="logo-row">
+      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+        <path d="M 14.58 27.40 A 10 10 0 1 1 21.42 27.40" stroke="currentColor" stroke-width="2.5" stroke-linecap="butt"/>
+      </svg>
+      <h1>Jobwatch</h1>
+    </div>
+    <button class="toggle" id="theme-toggle" type="button">theme: light</button>
+  </div>
+  <p class="lede">Brand preview. Straight from the source, scored on your own keywords, nothing leaves your browser.</p>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>Logo — four sizes</h2>
+    <div class="logo-ladder">
+      <div class="logo-cell">
+        <svg width="16" height="16" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <path d="M 11.5 23.79 A 9 9 0 1 1 20.5 23.79" stroke="currentColor" stroke-width="3.2" stroke-linecap="butt"/>
+        </svg>
+        <span>16px (favicon)</span>
+      </div>
+      <div class="logo-cell">
+        <svg width="24" height="24" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+          <path d="M 14.58 27.40 A 10 10 0 1 1 21.42 27.40" stroke="currentColor" stroke-width="2.5" stroke-linecap="butt"/>
+        </svg>
+        <span>24px</span>
+      </div>
+      <div class="logo-cell">
+        <svg width="40" height="40" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+          <path d="M 14.58 27.40 A 10 10 0 1 1 21.42 27.40" stroke="currentColor" stroke-width="2.5" stroke-linecap="butt"/>
+        </svg>
+        <span>40px</span>
+      </div>
+      <div class="logo-cell">
+        <svg width="72" height="72" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+          <path d="M 14.58 27.40 A 10 10 0 1 1 21.42 27.40" stroke="currentColor" stroke-width="2.5" stroke-linecap="butt"/>
+        </svg>
+        <span>72px</span>
+      </div>
+      <div class="logo-cell" style="margin-left:auto;">
+        <svg width="40" height="40" viewBox="0 0 172 36" fill="none" aria-hidden="true">
+          <path d="M 14.58 27.40 A 10 10 0 1 1 21.42 27.40" stroke="currentColor" stroke-width="2.5" stroke-linecap="butt"/>
+          <text x="42" y="24" fill="currentColor" font-family="system-ui, sans-serif" font-size="20" font-weight="600" letter-spacing="-0.3">Jobwatch</text>
+        </svg>
+        <span>lockup</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>Color — neutrals and accent</h2>
+    <div class="swatch-grid">
+      <div class="swatch">
+        <div class="swatch-fill" style="background:var(--c-surface); color:var(--c-text);">Aa</div>
+        <div class="swatch-meta"><span>text/surface</span><b>16.99:1</b></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-fill" style="background:var(--c-surface); color:var(--c-text-muted);">Aa</div>
+        <div class="swatch-meta"><span>muted/surface</span><b>7.42:1</b></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-fill" style="background:var(--c-surface); color:var(--c-accent);">Aa</div>
+        <div class="swatch-meta"><span>accent link</span><b>6.43:1</b></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-fill" style="background:var(--c-accent); color:var(--c-accent-fg);">Aa</div>
+        <div class="swatch-meta"><span>accent-fg/accent</span><b>6.70:1</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>Match — four bands</h2>
+    <div class="swatch-grid">
+      <div class="swatch">
+        <div class="swatch-fill" style="background:var(--c-fit-strong-bg); color:var(--c-fit-strong-fg);">Strong</div>
+        <div class="swatch-meta"><span>fg/bg</span><b>6.49:1</b></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-fill" style="background:var(--c-fit-good-bg); color:var(--c-fit-good-fg);">Good</div>
+        <div class="swatch-meta"><span>fg/bg</span><b>6.73:1</b></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-fill" style="background:var(--c-fit-partial-bg); color:var(--c-fit-partial-fg);">Partial</div>
+        <div class="swatch-meta"><span>fg/bg</span><b>6.37:1</b></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-fill" style="background:var(--c-fit-stretch-bg); color:var(--c-fit-stretch-fg);">Stretch</div>
+        <div class="swatch-meta"><span>fg/bg</span><b>8.62:1</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>Freshness — three bands</h2>
+    <div class="swatch-grid">
+      <div class="swatch">
+        <div class="swatch-fill" style="background:var(--c-fresh-bg); color:var(--c-fresh-fg);">Fresh</div>
+        <div class="swatch-meta"><span>fg/bg</span><b>7.30:1</b></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-fill" style="background:var(--c-recent-bg); color:var(--c-recent-fg);">Recent</div>
+        <div class="swatch-meta"><span>fg/bg</span><b>9.45:1</b></div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-fill" style="background:var(--c-stale-bg); color:var(--c-stale-fg);">Stale</div>
+        <div class="swatch-meta"><span>fg/bg</span><b>8.07:1</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>Type scale</h2>
+    <div style="border-top: var(--border-hair) solid var(--c-border);">
+      <div class="type-row"><span class="tag">2xl / 36px</span><span style="font-size:var(--text-2xl); font-weight:var(--weight-semibold);">Nothing new today</span></div>
+      <div class="type-row"><span class="tag">xl / 28px</span><span style="font-size:var(--text-xl); font-weight:var(--weight-semibold);">12 new since your last check</span></div>
+      <div class="type-row"><span class="tag">lg / 20px</span><span style="font-size:var(--text-lg); font-weight:var(--weight-med);">Forward Deployed Engineer</span></div>
+      <div class="type-row"><span class="tag">md / 17px</span><span style="font-size:var(--text-md);">Why this matched</span></div>
+      <div class="type-row"><span class="tag">base / 15px</span><span style="font-size:var(--text-base);">Higharc · Remote, US</span></div>
+      <div class="type-row"><span class="tag">sm / 13px, mono</span><span style="font-size:var(--text-sm); font-family:var(--font-mono);" class="tabular-nums">Match 8 · Fresh · Greenhouse · 2d ago</span></div>
+      <div class="type-row"><span class="tag">xs / 12px, mono</span><span style="font-size:var(--text-xs); font-family:var(--font-mono); text-transform:uppercase; letter-spacing:var(--tracking-caps); color:var(--c-text-muted);">matched keywords</span></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>Job card</h2>
+    <div class="job-card">
+      <span class="match-dot" aria-hidden="true"></span>
+      <span class="tabular-nums" style="font-family:var(--font-mono); font-weight:var(--weight-semibold);">8</span>
+      <div class="job-main">
+        <div class="title">Forward Deployed Engineer <span class="new-tag">NEW</span></div>
+        <div class="meta">Higharc · Remote, US · matched: forward-deployed · revit · python</div>
+      </div>
+      <div class="job-side">greenhouse<br>2d ago</div>
+    </div>
+    <div class="job-card">
+      <span class="match-dot" aria-hidden="true" style="background:var(--c-fit-good-fg);"></span>
+      <span class="tabular-nums" style="font-family:var(--font-mono); font-weight:var(--weight-semibold);">6</span>
+      <div class="job-main">
+        <div class="title">Solutions Engineer, AEC</div>
+        <div class="meta">Doxel · NYC, hybrid · matched: solutions · BIM · deployment</div>
+      </div>
+      <div class="job-side">lever<br>5d ago</div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>Match band chips</h2>
+    <div class="chip-row">
+      <span class="chip" style="background:var(--c-fit-strong-bg); color:var(--c-fit-strong-fg);">Strong · 9</span>
+      <span class="chip" style="background:var(--c-fit-good-bg); color:var(--c-fit-good-fg);">Good · 6</span>
+      <span class="chip" style="background:var(--c-fit-partial-bg); color:var(--c-fit-partial-fg);">Partial · 4</span>
+      <span class="chip" style="background:var(--c-fit-stretch-bg); color:var(--c-fit-stretch-fg);">Stretch · 2</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Freshness badge row</h2>
+    <div class="chip-row">
+      <span class="chip" style="background:var(--c-fresh-bg); color:var(--c-fresh-fg);">Fresh · 1d</span>
+      <span class="chip" style="background:var(--c-recent-bg); color:var(--c-recent-fg);">Recent · 6d</span>
+      <span class="chip" style="background:var(--c-stale-bg); color:var(--c-stale-fg);">Stale · 21d</span>
+    </div>
+  </section>
+
+</main>
+<script>
+  var btn = document.getElementById('theme-toggle');
+  var root = document.documentElement;
+  var stored = null;
+  try { stored = localStorage.getItem('jobwatch-preview-theme'); } catch (e) {}
+  if (stored === 'dark') { root.setAttribute('data-theme', 'dark'); btn.textContent = 'theme: dark'; }
+  btn.addEventListener('click', function () {
+    var isDark = root.getAttribute('data-theme') === 'dark';
+    if (isDark) {
+      root.removeAttribute('data-theme');
+      btn.textContent = 'theme: light';
+      try { localStorage.setItem('jobwatch-preview-theme', 'light'); } catch (e) {}
+    } else {
+      root.setAttribute('data-theme', 'dark');
+      btn.textContent = 'theme: dark';
+      try { localStorage.setItem('jobwatch-preview-theme', 'dark'); } catch (e) {}
+    }
+  });
+</script>
+</body>
+</html>

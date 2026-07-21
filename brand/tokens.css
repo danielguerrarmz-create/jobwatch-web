@@ -1,0 +1,124 @@
+/* ==========================================================================
+   Jobwatch — design tokens
+   Paste-ready, self-contained. No imports, no external fonts, no CDN calls.
+   Contrast ratios below are computed against the WCAG relative-luminance
+   formula, not estimated. See brand/identity.md §Color for the full table.
+   ========================================================================== */
+
+:root {
+  /* ---- Typography -------------------------------------------------- */
+  --font-sans: system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", Consolas, "SF Mono", Menlo, monospace;
+
+  --text-xs:   0.75rem;    /* 12px — chips, badges, fine print          */
+  --text-sm:   0.8125rem;  /* 13px — meta lines, source labels           */
+  --text-base: 0.9375rem;  /* 15px — job title, body copy                */
+  --text-md:   1.0625rem;  /* 17px — panel headings, drawer title        */
+  --text-lg:   1.25rem;    /*  20px — section headings                   */
+  --text-xl:   1.75rem;    /*  28px — wordmark, page title                */
+  --text-2xl:  2.25rem;    /*  36px — splash / empty-state heading        */
+
+  --leading-tight: 1.2;
+  --leading-base:  1.5;
+  --tracking-caps: 0.06em;   /* ALL-CAPS labels only                     */
+  --weight-reg:      400;
+  --weight-med:      500;
+  --weight-semibold: 600;
+
+  /* Apply to any element carrying scores, dates, counts, or percentages */
+  --numeric-tabular: 1;
+
+  /* ---- Spacing -------------------------------------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  --control-h:  36px;   /* buttons, inputs, selects — uniform height     */
+  --row-pad-y:  10px;   /* job card vertical padding                     */
+  --max-content: 960px;
+
+  /* ---- Radii, borders, shadow ------------------------------------------ */
+  --radius-sm:   4px;   /* chips, inputs                                  */
+  --radius-md:   8px;   /* job cards, panels                              */
+  --radius-lg:  12px;   /* modals, the empty-state block                  */
+  --radius-pill: 999px; /* match dot, badges                              */
+  --border-hair: 1px;
+
+  /* Shadows are reserved for elements that float above the page —
+     dropdowns, the detail panel, modals. Job cards never get a shadow;
+     separation there is a hairline border, not elevation. */
+  --shadow-raised: 0 8px 24px hsl(220 30% 8% / 0.10), 0 1px 2px hsl(220 30% 8% / 0.06);
+
+  /* ---- Color: light theme (default) ------------------------------------ */
+  --c-surface:        #FAFAFB;  /* page background                        */
+  --c-surface-raised: #FFFFFF;  /* cards, panels, the drawer               */
+  --c-border:         #E4E4E7;  /* hairline rules                          */
+  --c-border-strong:  #C7C7CC;  /* input/control borders                   */
+  --c-text:           #18181B;  /* primary ink                             */
+  --c-text-muted:     #52525B;  /* secondary / meta text                   */
+  --c-text-faint:     #8A8A93;  /* placeholder, disabled                   */
+
+  --c-accent:      #1D4ED8;  /* Signal Blue — links, focus, buttons only  */
+  --c-accent-hover: #1E40AF;
+  --c-accent-fg:   #FFFFFF;  /* text/icon color drawn on an accent fill   */
+
+  /* Match (fit) scale — four bands, tint background + saturated text */
+  --c-fit-strong-bg: #DCFCE7;  --c-fit-strong-fg: #166534;
+  --c-fit-good-bg:   #CCFBF1;  --c-fit-good-fg:   #115E59;
+  --c-fit-partial-bg:#FEF3C7;  --c-fit-partial-fg:#92400E;
+  --c-fit-stretch-bg:#E9E9EC;  --c-fit-stretch-fg:#3F3F46;
+
+  /* Freshness scale — three bands, same tint+text pattern */
+  --c-fresh-bg:  #ECFDF5;  --c-fresh-fg:  #065F46;
+  --c-recent-bg: #F1F5F9;  --c-recent-fg: #334155;
+  --c-stale-bg:  #FAF0E6;  --c-stale-fg:  #78350F;
+
+  /* Status (distinct from Match/Freshness — used for source health only) */
+  --c-ok:   #166534;
+  --c-warn: #92400E;   /* amber-brown, never red — see identity.md §Voice */
+  --c-error:#9F1239;   /* reserved for real failures only                */
+
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --c-surface:        #0B0D12;
+  --c-surface-raised: #14171D;
+  --c-border:         #262A33;
+  --c-border-strong:  #383E4A;
+  --c-text:           #F1F2F4;
+  --c-text-muted:     #A0A6B0;
+  --c-text-faint:     #6B7280;
+
+  --c-accent:      #6B9BFF;
+  --c-accent-hover:#8AB0FF;
+  --c-accent-fg:   #0A0C10;   /* dark ink on the lighter dark-mode accent */
+
+  --c-fit-strong-bg: #0F2A1C;  --c-fit-strong-fg: #86EFAC;
+  --c-fit-good-bg:   #0B2A28;  --c-fit-good-fg:   #5EEAD4;
+  --c-fit-partial-bg:#2A1E08;  --c-fit-partial-fg:#FCD34D;
+  --c-fit-stretch-bg:#1C1E24;  --c-fit-stretch-fg:#C4C7CE;
+
+  --c-fresh-bg:  #06231A;  --c-fresh-fg:  #6EE7B7;
+  --c-recent-bg: #171A20;  --c-recent-fg: #94A3B8;
+  --c-stale-bg:  #241C10;  --c-stale-fg:  #D6B888;
+
+  --c-ok:   #86EFAC;
+  --c-warn: #FCD34D;
+  --c-error:#FDA4AF;
+
+  --shadow-raised: 0 8px 24px hsl(0 0% 0% / 0.45), 0 1px 2px hsl(0 0% 0% / 0.3);
+
+  color-scheme: dark;
+}
+
+/* Utility: apply to any element that shows a score, date, or count so
+   digits line up in a column instead of jittering as they change. */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
